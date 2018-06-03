@@ -1,0 +1,67 @@
+---
+layout: post
+title:  "Latent Semantic Models for Information Retrival"
+date:   2018-05-06 10:18:12 -0700
+categories: jekyll update
+tags: [hyde]
+---
+
+A series of new latent semantic models have been proposed by Gao et al. which is reported to outperform significantly conventional models. Here we will review this class of deep representation learning models, starting from Deep Structured Semantic Models(DSSM) to Convolutional Deep Structured Semantic Models (CDSSM)
+
+
+## 1. Introduction
+
+Latent semantic models are able to map a query to its relevanct documents at the semantic level. However, most latent semntic modes still view a query or a document as a bag of words. Therefore, they are not effective in capturing fine-grained contextual structures for information retrieval. In this report, we will review two deep neural network (DNN) based model to rank a set of documents for a given query as follows. First, a non-linear projection is performed to map the query and the documents to a common semantic space. Then, the relevance fo each document given the query is calculated as the cosine similarity betwen their vectors in that semantic sapce. 
+
+The DSSM uses a feed-forward neural entwork to map the raw term vector (i.e., with the bag-of-words representation) of a query or a document to its latent semantic vector, where the first layer, also known as the word hashing layer, converts the term vector to a letter-trigram vector to scale up the training. The final layer's neural activities form the vector representation in the semantic space.
+
+Compared to DSSM, C-DSSM has a convolutional layer that projects each word within a context window to a local contextual feature vector. Semantically similar words-within-context are projected to vectors that are close to each other in the contextual feature space. Further, since the overall semantic meaning of a sentence is often determined by a few *key* words in the sentence, thus, simpley mixing all the words together by summing over all local feature vectors may introduce unnecessary divergence and hurt the effectiveness of the overall semantic representation. Therefore, C-DSSM uses a max pooling layer to extract the most salient local features to form a fixed-length global feature vector. The global feature vector can then be fed to feed-forward neural network layers, which perform affine transformation followed by non-linear functions applied element-wise over their input to extract highly non-linear and effecitve features.
+
+
+
+## 2. The DSSM/C-DSSM Architecture
+
+### 2.1 Deep Structured Semantic Models (DSSM)
+
+The Typical DNN architecture of DSSM is shown in Figure 1. The Input (raw text features) to the DNN is a high-dimensional term vector, e.g., raw counts of terms in a query or a document without normalization, and the output of the DNN is a concept vector in a low-dimensional semantic feature space.
+
+![image-title-here](/assets/DSSM.png)
+
+
+### 2.2 Convolutional Deep Structured Semantic Models (C-DSSM)
+The architecture of the C-DSSM, is illustrated in Figure 2. The C-DSSM contains a word-hashing layer that transforms each word into a letter-trigram input representation, a convolutional alyer to extract local contextual features, a max-pooling layer to form a global feature vector, and a final semantic layer to represent the high-level sematic feature vector of the input word sequence.
+
+![image-title-here](/assets/CDSSM.png)
+
+
+### 2.3 Letter-trigram based Word-n-gram Representation
+Conventionally, each word *w* is represented by a one-hot word vector where the dimensionality of the vector is the size of the vocabulary. However, the vocabulary size is often very large, and the one-hot vector word representaion makes model learning very expensive. Gao et al. propsoed a technique called *word hashing*, which represents a word by a letter-trigram vector. For example, given a word (e.g. boy), after adding word boundary symbols (e.g. #boy#), the word is segmented into a sequence of letter-n-grams (e.g. letter-tri-grams: #-b-o, b-o-y, o-y-#). Then a word is represented as coun vector of ltter-tri-grams. For example, the letter-trigram representaion of "boy" is:
+
+![image-title-here](/assets/WordHashing.png)
+
+
+### 2.4 Using the DSSM/C-DSSM for IR
+Given a query and a set of documents to be rank, we first compute the semantic vector representations for the query and all the documents using the DSSM/C-DSSM as described above. The semantic relevance is then measured as:
+
+$$R(Q,D) = cosine(y_Q, y_D) = \frac{y_Q^Ty_D}{\left \| y_Q \right \|\left \| y_D \right \|}$$
+
+
+
+## 3. Learning the DSSM/C-DSSM for IR
+The clickthrough log consists of a list of queries and their clicked documents. We assume that a query is relevant to the documents that are clicked on for that query, and train the DSSM/C-DSSM on the clickthrought data in such a way that the semantic relevance scores between the clicked documents given the queries are maximized.
+
+First, we compute the posterior probability of a document given a query from the semantic relevance score between them through a softmax function
+
+$$P(D|Q) = \frac{exp(\gamma R(Q, D))}{\sum_{D' \in \mathbf{D}} exp(\gamma R(Q, D'))}$$
+
+where $$\gamma$$ is a smoothing factor in the softmax function, which is set empirically on a held-out data set in our experiement. $$\mathbf{D}$$ denotes the set of candidate documents to be ranked. In practice, for each (query, clicked-document) pair, we denote by $$(Q, D^+)$$ where $$Q$$ is a query and $$D^+$$ is the clicked document and approximate $$\mathbf{D}$$ by including $$D^+$$ and $$J$$ randomly selected unclicked documents, denoted by $${D_j^-; j = 1, ..., J}$$.
+In training, the model parameters are learned to maximize the likelihood of the clicked documents given the queries across the training set. Equivalently, we need to minimize the following loss function 
+
+$$L(\Lambda ) = -log \underset{(Q, D^+)}{\prod} P(D^+ | D)$$
+
+Where $$\Lambda$$ denotes the parameter set of the neural networks.
+
+
+
+## 4. Conclusions
+We reviewed a class of deep representation learning models, which we call the DSSM/C-DSSM. Inspired by the deep learning framework, DSSM extends the linear semantic models to their nonlinear counterparts using multiple hidden representation layers. C-DSSM, movitvated by the convolutional structure of the CNN, extracts both local contextural features at the word-n-gram level (via the convolutional alyer) and global contextual features at the sentence-level (via the max-pooling layer) from text. The higher layers in the overall deep architecture make effective use of the extracted context-sensitive features to generate latent semantice vector represtations which facilitate semantic matching between documents and queries for Web search applications.
